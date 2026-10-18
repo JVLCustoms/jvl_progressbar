@@ -1,161 +1,126 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <title>JVL Progressbar</title>
-    <script src="nui://game/ui/jquery.js" type="text/javascript"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="jvl-steel-blue.css">
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            font-family: 'Poppins', sans-serif;
-            background: transparent;
-        }
+        /* JVL Steel Blue progress bar. Tokens and .jvl-* components come from jvl-steel-blue.css. */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
 
-        #progressbar-container {
-            display: none;
+        #progreso {
             position: fixed;
             left: 50%;
+            width: 400px;
+            padding: 14px 18px 16px;
+            opacity: 0;
+            transition: opacity 0.18s ease;
             z-index: 9999;
-            background: transparent !important;
         }
+        #progreso.visible { opacity: 1; }
+        #progreso.pos-center { top: 50%; transform: translate(-50%, -50%); }
+        #progreso.pos-top { top: 15%; transform: translateX(-50%); }
+        #progreso.pos-bottom { bottom: 12%; transform: translateX(-50%); }
 
-        #progressbar-fill {
-            height: 100%;
-            width: 0%;
-            border-radius: inherit;
+        .cabecera {
             position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+            font-size: 12.5px;
+            font-weight: 500;
+        }
+        .cabecera .etiqueta { display: flex; align-items: center; gap: 8px; min-width: 0; }
+        .cabecera .etiqueta i { color: var(--jvl-cian); filter: drop-shadow(0 0 5px var(--jvl-cian)); }
+        .cabecera .etiqueta span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cabecera .porcentaje { color: var(--jvl-texto-3); font-variant-numeric: tabular-nums; }
+
+        /* Moving shine over the fill */
+        .jvl-relleno { width: 0%; overflow: visible; }
+        .jvl-relleno .destello {
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
             overflow: hidden;
         }
-
-        /* Efecto shimmer */
-        #progressbar-fill::before {
+        .jvl-relleno .destello::before {
             content: '';
             position: absolute;
             top: 0;
-            left: -100%;
-            width: 100%;
+            left: -60%;
+            width: 60%;
             height: 100%;
-            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
-            animation: shimmer 2s ease-in-out infinite;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+            animation: destello 1.6s ease-in-out infinite;
         }
+        @keyframes destello { to { left: 110%; } }
 
-        #progressbar-text {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            text-align: center;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.7);
-            letter-spacing: 0.5px;
-            z-index: 2;
-        }
-
-
-        
-        @keyframes shimmer {
-            0% { left: -100%; }
-            100% { left: 100%; }
-        }
-
-        /* Posiciones */
-        .pos-center {
-            top: 50%;
-            transform: translate(-50%, -50%);
-        }
-
-        .pos-top {
-            top: 15%;
-            transform: translateX(-50%);
-        }
-
-        .pos-bottom {
-            bottom: 15%;
-            transform: translateX(-50%);
-        }
+        #progreso.cancelado .jvl-relleno { background: linear-gradient(90deg, #3b0f16, var(--jvl-error)); box-shadow: 0 0 12px rgba(248, 113, 113, 0.7); }
     </style>
 </head>
 <body>
-    <div id="progressbar-container">
-        <div id="progressbar-fill"></div>
-        <div id="progressbar-text">Procesando...</div>
+    <div id="progreso" class="jvl-panel jvl-translucido pos-bottom">
+        <div class="jvl-brillo"></div>
+        <div class="cabecera">
+            <div class="etiqueta"><i class="fa-solid fa-gear fa-spin"></i><span id="texto">Procesando...</span></div>
+            <div class="porcentaje" id="porcentaje">0%</div>
+        </div>
+        <div class="jvl-pista"><div class="jvl-relleno" id="relleno"><div class="destello"></div></div></div>
     </div>
 
     <script>
-        $(document).ready(function() {
-            //console.log('JVL Progressbar cargado');
-            
-            let animationId = null;
-            
-            window.addEventListener('message', function(event) {
-                const data = event.data;
-                
-                if (data.type === "progressbar") {
-                    if (data.action === "start") {
-                        const style = data.style;
-                        const $container = $('#progressbar-container');
-                        const $fill = $('#progressbar-fill');
-                        const $text = $('#progressbar-text');
-                        
-                        // Aplicar estilos
-                        $container.css({
-                            'width': style.width,
-                            'height': style.height,
-                            'border-radius': style.borderRadius,
-                            'box-shadow': style.shadow,
-                            'background-color': style.bgColor
-                        });
-                        
-                        $fill.css('background-color', style.barColor);
-                        
-                        $text.css({
-                            'color': style.textColor,
-                            'font-family': style.fontFamily,
-                            'font-size': style.fontSize,
-                            'font-weight': style.fontWeight
-                        }).text(data.text);
-                        
-                        // Posición
-                        $container.removeClass('pos-center pos-top pos-bottom')
-                                 .addClass('pos-' + style.position);
-                        
-                        // Mostrar y resetear
-                        $fill.css('width', '0%');
-                        $container.show();
-                        
-                        // Animación smooth
-                        const startTime = performance.now();
-                        const duration = data.time;
-                        
-                        function animate(currentTime) {
-                            const elapsed = currentTime - startTime;
-                            const progress = Math.min(100, (elapsed / duration) * 100);
-                            
-                            $fill.css('width', progress + '%');
-                            
-                            if (progress < 100) {
-                                animationId = requestAnimationFrame(animate);
-                            }
-                        }
-                        
-                        if (animationId) cancelAnimationFrame(animationId);
-                        animationId = requestAnimationFrame(animate);
-                        
-                    } else if (data.action === "stop") {
-                        if (animationId) {
-                            cancelAnimationFrame(animationId);
-                            animationId = null;
-                        }
-                        $('#progressbar-container').hide();
-                    }
-                }
-            });
+        // Same NUI messages as before: { type: 'progressbar', action: 'start'|'stop', time, text, style }
+        const caja = document.getElementById('progreso');
+        const texto = document.getElementById('texto');
+        const porcentaje = document.getElementById('porcentaje');
+        const relleno = document.getElementById('relleno');
+        let animacion = null;
+
+        function detener() {
+            if (animacion) cancelAnimationFrame(animacion);
+            animacion = null;
+            caja.classList.remove('visible');
+        }
+
+        window.addEventListener('message', (evento) => {
+            const datos = evento.data || {};
+            if (datos.type !== 'progressbar') return;
+
+            if (datos.action === 'start') {
+                const estilo = datos.style || {};
+                caja.classList.remove('pos-center', 'pos-top', 'pos-bottom', 'cancelado');
+                caja.classList.add('pos-' + (estilo.position || 'bottom'));
+                if (estilo.width) caja.style.width = estilo.width;
+                texto.textContent = datos.text || 'Procesando...';
+                relleno.style.width = '0%';
+                porcentaje.textContent = '0%';
+                caja.classList.add('visible');
+
+                const inicio = performance.now();
+                const duracion = Math.max(1, datos.time || 1);
+                const paso = (ahora) => {
+                    const avance = Math.min(100, ((ahora - inicio) / duracion) * 100);
+                    relleno.style.width = avance + '%';
+                    porcentaje.textContent = Math.floor(avance) + '%';
+                    if (avance < 100) animacion = requestAnimationFrame(paso);
+                };
+                if (animacion) cancelAnimationFrame(animacion);
+                animacion = requestAnimationFrame(paso);
+            } else if (datos.action === 'stop') {
+                detener();
+            } else if (datos.action === 'cancel') {
+                // Red bar for a moment, then hide
+                if (animacion) cancelAnimationFrame(animacion);
+                animacion = null;
+                caja.classList.add('cancelado');
+                setTimeout(() => { caja.classList.remove('cancelado'); detener(); }, 600);
+            }
         });
     </script>
 </body>
