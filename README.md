@@ -47,6 +47,17 @@ Colors, font, borders and the light line come from `jvl-steel-blue.css`, the sam
 </tr>
 </table>
 
+## 📸 Preview
+
+<div align="center">
+<table>
+<tr>
+<td align="center"><img src="assets/readme/screenshot-carjack.png" alt="Progress bar while threatening a driver" width="380"><br><sub>"Threatening the driver..." during a carjacking</sub></td>
+<td align="center"><img src="assets/readme/screenshot-search.png" alt="Progress bar while searching a vehicle" width="380"><br><sub>"Searching the vehicle..." with the live percentage</sub></td>
+</tr>
+</table>
+</div>
+
 ## 🔄 How it works
 
 ```mermaid
